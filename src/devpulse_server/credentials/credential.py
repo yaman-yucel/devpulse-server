@@ -1,50 +1,25 @@
-from enum import Enum
-
 from loguru import logger
-from pydantic import BaseModel
 
-from devpulse_server.api.credentials.models.credential_models import DeviceFingerprint
+from devpulse_server.api.credentials.models.credential_models import (
+    DeleteResponse,
+    DeleteStatus,
+    DeviceFingerprint,
+    EnrollResponse,
+    EnrollStatus,
+    UpdateUsernameResponse,
+    UpdateUsernameStatus,
+    ValidateResponse,
+    ValidateStatus,
+)
 from devpulse_server.database.connection import get_db
 from devpulse_server.database.tables.device import Device
 from devpulse_server.database.tables.user import User
-
-
-class EnrollStatus(Enum):
-    """Enum representing credential operation outcomes."""
-
-    SUCCESS = "success"
-    FAILURE = "failure"
-    ALREADY_EXISTS = "already_exists"
-    INVALID_REQUEST = "invalid_request"
-
-
-class EnrollResponse(BaseModel):
-    """Response model for enrollment."""
-
-    status: EnrollStatus
-    message: str
-
-
-class ValidateStatus(Enum):
-    """Enum representing credential operation outcomes."""
-
-    SUCCESS = "success"
-    FAILURE = "failure"
-    INVALID_REQUEST = "invalid_request"
-
-
-class ValidateResponse(BaseModel):
-    """Response model for validation."""
-
-    status: ValidateStatus
-    message: str
 
 
 class CredentialClient:
     """Credentials class."""
 
     def enroll_credential(self, username: str, user_email: str, device_fingerprint: DeviceFingerprint) -> EnrollResponse:
-        """Enroll a new credential with user-device logic."""
         db = next(get_db())
         try:
             user = db.query(User).filter(User.user_email == user_email).first()
@@ -120,5 +95,39 @@ class CredentialClient:
         except Exception as e:
             logger.error(f"Error validating credential: {e}")
             return ValidateResponse(status=ValidateStatus.FAILURE, message=f"Error validating credential: {e}")
+        finally:
+            db.close()
+
+    def delete_user(self, user_email: str) -> DeleteResponse:
+        """Delete a user."""
+        db = next(get_db())
+        try:
+            user = db.query(User).filter(User.user_email == user_email).first()
+            if user:
+                db.delete(user)
+                db.commit()
+                return DeleteResponse(status=DeleteStatus.SUCCESS, message="User deleted.")
+            else:
+                return DeleteResponse(status=DeleteStatus.FAILURE, message="User not found.")
+        except Exception as e:
+            logger.error(f"Error deleting user: {e}")
+            return DeleteResponse(status=DeleteStatus.FAILURE, message=f"Error deleting user: {e}")
+        finally:
+            db.close()
+
+    def update_username(self, user_email: str, username: str) -> UpdateUsernameResponse:
+        """Update a user's username."""
+        db = next(get_db())
+        try:
+            user = db.query(User).filter(User.user_email == user_email).first()
+            if user:
+                user.user_name = username  # type: ignore
+                db.commit()
+                return UpdateUsernameResponse(status=UpdateUsernameStatus.SUCCESS, message="Username updated.")
+            else:
+                return UpdateUsernameResponse(status=UpdateUsernameStatus.FAILURE, message="User not found.")
+        except Exception as e:
+            logger.error(f"Error updating username: {e}")
+            return UpdateUsernameResponse(status=UpdateUsernameStatus.FAILURE, message=f"Error updating username: {e}")
         finally:
             db.close()

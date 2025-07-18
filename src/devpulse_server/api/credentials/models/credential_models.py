@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+from enum import Enum
+
 from pydantic import BaseModel, ConfigDict, Field
 
 
@@ -35,3 +37,64 @@ class CredentialValidationRequest(BaseModel):
 
     user_email: str = Field(..., pattern=r"^[^@]+@[^@]+\.[^@]+$", description="User email address")
     device_fingerprint: DeviceFingerprint = Field(..., description="Device hardware fingerprint (MAC only)")
+
+
+class EnrollStatus(Enum):
+    """Enum representing credential operation outcomes."""
+
+    SUCCESS = "success"
+    FAILURE = "failure"
+    ALREADY_EXISTS = "already_exists"
+    INVALID_REQUEST = "invalid_request"
+
+
+class EnrollResponse(BaseModel):
+    """Response model for enrollment."""
+
+    status: EnrollStatus
+    message: str
+
+
+class ValidateStatus(Enum):
+    """Enum representing credential operation outcomes."""
+
+    SUCCESS = "success"
+    FAILURE = "failure"
+    INVALID_REQUEST = "invalid_request"
+
+
+class ValidateResponse(BaseModel):
+    """Response model for validation."""
+
+    status: ValidateStatus
+    message: str
+
+
+class DeleteStatus(Enum):
+    """Enum representing credential operation outcomes."""
+
+    SUCCESS = "success"
+    FAILURE = "failure"
+    INVALID_REQUEST = "invalid_request"
+
+
+class DeleteResponse(BaseModel):
+    """Response model for deletion."""
+
+    status: DeleteStatus
+    message: str
+
+
+class UpdateUsernameStatus(Enum):
+    """Enum representing credential operation outcomes."""
+
+    SUCCESS = "success"
+    FAILURE = "failure"
+    INVALID_REQUEST = "invalid_request"
+
+
+class UpdateUsernameResponse(BaseModel):
+    """Response model for updating username."""
+
+    status: UpdateUsernameStatus
+    message: str
