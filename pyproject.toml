@@ -1,0 +1,20 @@
+[project]
+name = "devpulse-server"
+version = "0.1.0"
+description = "Server DevPulse"
+readme = "README.md"
+authors = [
+    { name = "Yaman Yucel", email = "yamanyucel0@gmail.com" }
+]
+requires-python = ">=3.13"
+dependencies = [
+    "sqlalchemy>=2.0.0",
+    "pydantic>=2.0.0",
+    "email-validator>=2.0.0",
+    "fastapi>=0.116.1",
+    "loguru>=0.7.0",
+    "uvicorn>=0.35.0",
+]
+
+[project.scripts]
+devpulse-server = "devpulse_server.main:main"
