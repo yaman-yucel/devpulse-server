@@ -1,9 +1,3 @@
-"""Pydantic models for enrollment data structures."""
-
-from __future__ import annotations
-
-from enum import Enum
-
 from pydantic import BaseModel, ConfigDict, Field
 
 
@@ -20,81 +14,26 @@ class DeviceFingerprint(BaseModel):
     processor: str | None = Field(None, min_length=1, description="Processor name")
 
 
-class EnrollmentRequest(BaseModel):
+class SignupRequest(BaseModel):
     """Enrollment request data sent to the server."""
 
     model_config = ConfigDict(str_strip_whitespace=True, validate_assignment=True, extra="forbid")
 
     username: str = Field(..., min_length=1, description="Username for enrollment")
     user_email: str = Field(..., pattern=r"^[^@]+@[^@]+\.[^@]+$", description="User email address")
+    password: str = Field(..., min_length=1, description="User password")
     hostname: str | None = Field(None, min_length=1, description="Device hostname")
     platform: str | None = Field(None, min_length=1, description="Platform name")
     device_fingerprint: DeviceFingerprint = Field(..., description="Device hardware fingerprint")
+    # admin_secret: str = Field(..., min_length=1, description="Admin secret")
 
 
-class CredentialValidationRequest(BaseModel):
-    """Request model for credential validation."""
+class LoginRequest(BaseModel):
+    """Login request with username, password and device MAC address."""
 
-    user_email: str = Field(..., pattern=r"^[^@]+@[^@]+\.[^@]+$", description="User email address")
-    device_fingerprint: DeviceFingerprint = Field(..., description="Device hardware fingerprint (MAC only)")
+    model_config = ConfigDict(str_strip_whitespace=True, validate_assignment=True, extra="forbid")
 
-
-class EnrollStatus(Enum):
-    """Enum representing credential operation outcomes."""
-
-    SUCCESS = "success"
-    FAILURE = "failure"
-    ALREADY_EXISTS = "already_exists"
-    INVALID_REQUEST = "invalid_request"
-
-
-class EnrollResponse(BaseModel):
-    """Response model for enrollment."""
-
-    status: EnrollStatus
-    message: str
-
-
-class ValidateStatus(Enum):
-    """Enum representing credential operation outcomes."""
-
-    SUCCESS = "success"
-    FAILURE = "failure"
-    INVALID_REQUEST = "invalid_request"
-
-
-class ValidateResponse(BaseModel):
-    """Response model for validation."""
-
-    status: ValidateStatus
-    message: str
-
-
-class DeleteStatus(Enum):
-    """Enum representing credential operation outcomes."""
-
-    SUCCESS = "success"
-    FAILURE = "failure"
-    INVALID_REQUEST = "invalid_request"
-
-
-class DeleteResponse(BaseModel):
-    """Response model for deletion."""
-
-    status: DeleteStatus
-    message: str
-
-
-class UpdateUsernameStatus(Enum):
-    """Enum representing credential operation outcomes."""
-
-    SUCCESS = "success"
-    FAILURE = "failure"
-    INVALID_REQUEST = "invalid_request"
-
-
-class UpdateUsernameResponse(BaseModel):
-    """Response model for updating username."""
-
-    status: UpdateUsernameStatus
-    message: str
+    username: str = Field(..., min_length=1, description="Username")
+    password: str = Field(..., min_length=1, description="Password")
+    mac_address: str = Field(..., pattern=r"^([0-9A-Fa-f]{2}[:-]){5}([0-9A-Fa-f]{2})$", description="Device MAC address")
+    never_expires: bool = Field(False, description="Whether the token should never expire")

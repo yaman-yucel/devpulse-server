@@ -1,0 +1,15 @@
+{
+  "username": "yaman",
+  "user_email": "yamanyucel@gmail.com",
+  "password": "12345",
+  "hostname": "string",
+  "platform": "string",
+  "device_fingerprint": {
+    "mac_address": "00:00:00-00:00:00",
+    "serial_number": "string",
+    "cpu_info": "string",
+    "memory_gb": 1,
+    "architecture": "string",
+    "processor": "string"
+  }
+}

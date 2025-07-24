@@ -1,41 +1,45 @@
-from loguru import logger
+from dataclasses import dataclass
 
-from devpulse_server.api.credentials.models.credential_models import (
-    DeleteResponse,
-    DeleteStatus,
-    DeviceFingerprint,
-    EnrollResponse,
-    EnrollStatus,
-    UpdateUsernameResponse,
-    UpdateUsernameStatus,
-    ValidateResponse,
-    ValidateStatus,
-)
+from fastapi import HTTPException
+from loguru import logger
+from passlib.context import CryptContext
+
+from devpulse_server.api.credentials.models.credential_models import DeviceFingerprint
 from devpulse_server.database.connection import get_db
 from devpulse_server.database.tables.device import Device
 from devpulse_server.database.tables.user import User
 
 
+@dataclass
 class CredentialClient:
     """Credentials class."""
 
-    def enroll_credential(self, username: str, user_email: str, device_fingerprint: DeviceFingerprint) -> EnrollResponse:
+    pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
+
+    def enroll_credential(self, username: str, password: str, email: str, device_fingerprint: DeviceFingerprint) -> bool:
         db = next(get_db())
         try:
-            user = db.query(User).filter(User.user_email == user_email).first()
+            user = db.query(User).filter(User.username == username).first()
             device = db.query(Device).filter(Device.mac_address == device_fingerprint.mac_address).first()
 
             if device and not user:
-                logger.info(f"Device {device_fingerprint.mac_address} exists but user {user_email} does not. Invalid request.")
-                return EnrollResponse(status=EnrollStatus.INVALID_REQUEST, message="Device exists but user does not. Invalid request.")
+                logger.info(f"Device {device_fingerprint.mac_address} exists but user {username} does not. Invalid request.")
+                return False
 
             if user and device:
-                logger.info(f"User {user_email} and device {device_fingerprint.mac_address} already enrolled.")
-                return EnrollResponse(status=EnrollStatus.ALREADY_EXISTS, message="User and device already enrolled.")
+                logger.info(f"User {username} and device {device_fingerprint.mac_address} already enrolled.")
+                return False
 
             if not user and not device:
-                # Add user
-                user = User(user_name=username, user_email=user_email)
+                # Add user with hashed password
+                password_hash = self.pwd_context.hash(password)
+                user = User(
+                    username=username,
+                    email=email,
+                    hashed_password=password_hash,
+                    is_active=True,
+                    is_admin=False,
+                )
                 db.add(user)
                 db.commit()
                 db.refresh(user)
@@ -52,8 +56,8 @@ class CredentialClient:
                 db.add(device)
                 db.commit()
                 db.refresh(device)
-                logger.info(f"Added user {user_email} and device {device_fingerprint.mac_address}.")
-                return EnrollResponse(status=EnrollStatus.SUCCESS, message="User and device enrolled.")
+                logger.info(f"Added user {username} and device {device_fingerprint.mac_address}.")
+                return True
 
             if user and not device:
                 # Add device linked to user
@@ -69,65 +73,53 @@ class CredentialClient:
                 db.add(device)
                 db.commit()
                 db.refresh(device)
-                logger.info(f"Added device {device_fingerprint.mac_address} for user {user_email}.")
-                return EnrollResponse(status=EnrollStatus.SUCCESS, message="Device enrolled for existing user.")
-            return EnrollResponse(status=EnrollStatus.FAILURE, message="Unknown error in enrollment logic.")
+                logger.info(f"Added device {device_fingerprint.mac_address} for user {email}.")
+                return True
+            return False
         except Exception as e:
             logger.error(f"Error enrolling credential: {e}")
             db.rollback()
-            return EnrollResponse(status=EnrollStatus.FAILURE, message=f"Error enrolling credential: {e}")
+            return False
         finally:
             db.close()
 
-    def validate_credential(self, user_email: str, device_fingerprint: DeviceFingerprint) -> ValidateResponse:
-        """Validate a credential."""
+    def authenticate_user(self, username: str, plain_password: str, device_fingerprint: DeviceFingerprint):
+        """Authenticate a user and return user object if valid, None otherwise."""
         db = next(get_db())
         try:
             device = db.query(Device).filter(Device.mac_address == device_fingerprint.mac_address).first()
-            user = db.query(User).filter(User.user_email == user_email).first()
+            user = db.query(User).filter(User.username == username).first()
+
             if device is not None and user is not None:
-                if getattr(device, "user_id", None) == getattr(user, "user_id", None):
-                    return ValidateResponse(status=ValidateStatus.SUCCESS, message="Credential validated.")
+                if device.user_id == user.user_id:
+                    if self._verify_password(plain_password, user.hashed_password):
+                        return user
+                    else:
+                        return None
                 else:
-                    return ValidateResponse(status=ValidateStatus.FAILURE, message="Device does not belong to user. Enroll the device first.")
+                    return None
             else:
-                return ValidateResponse(status=ValidateStatus.FAILURE, message="Device or user not found.")
+                return None
         except Exception as e:
-            logger.error(f"Error validating credential: {e}")
-            return ValidateResponse(status=ValidateStatus.FAILURE, message=f"Error validating credential: {e}")
+            logger.error(f"Error authenticating user: {e}")
+            return None
         finally:
             db.close()
 
-    def delete_user(self, user_email: str) -> DeleteResponse:
-        """Delete a user."""
-        db = next(get_db())
-        try:
-            user = db.query(User).filter(User.user_email == user_email).first()
-            if user:
-                db.delete(user)
-                db.commit()
-                return DeleteResponse(status=DeleteStatus.SUCCESS, message="User deleted.")
-            else:
-                return DeleteResponse(status=DeleteStatus.FAILURE, message="User not found.")
-        except Exception as e:
-            logger.error(f"Error deleting user: {e}")
-            return DeleteResponse(status=DeleteStatus.FAILURE, message=f"Error deleting user: {e}")
-        finally:
-            db.close()
+    # def get_user_by_username(self, username: str):
+    #     """Get user by username."""
+    #     db = next(get_db())
+    #     try:
+    #         user = db.query(User).filter(User.username == username).first()
+    #         return user
+    #     except Exception as e:
+    #         logger.error(f"Error getting user by username: {e}")
+    #         return None
+    #     finally:
+    #         db.close()
 
-    def update_username(self, user_email: str, username: str) -> UpdateUsernameResponse:
-        """Update a user's username."""
-        db = next(get_db())
-        try:
-            user = db.query(User).filter(User.user_email == user_email).first()
-            if user:
-                user.user_name = username  # type: ignore
-                db.commit()
-                return UpdateUsernameResponse(status=UpdateUsernameStatus.SUCCESS, message="Username updated.")
-            else:
-                return UpdateUsernameResponse(status=UpdateUsernameStatus.FAILURE, message="User not found.")
-        except Exception as e:
-            logger.error(f"Error updating username: {e}")
-            return UpdateUsernameResponse(status=UpdateUsernameStatus.FAILURE, message=f"Error updating username: {e}")
-        finally:
-            db.close()
+    def _verify_password(self, plain_password: str, hashed_password: str) -> bool:
+        return self.pwd_context.verify(plain_password, hashed_password)
+
+    def _hash_password(self, plain_password: str) -> str:
+        return self.pwd_context.hash(plain_password)
