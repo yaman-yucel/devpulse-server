@@ -40,7 +40,7 @@ async def ingest_events(
             detail=f"Error processing events: {exc}",
         )
 
-
+    
 # @router.post("/flush")
 # def flush_ingest(request: Request, token: str = Depends(oauth2_scheme)) -> dict:
 #     """Flush the ingest queue."""
