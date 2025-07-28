@@ -2,20 +2,18 @@
 
 from pathlib import Path
 from typing import Generator
-
+import os
 from sqlalchemy import create_engine
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import Session, sessionmaker
 
-DB_DIR = Path("data")
-DB_DIR.mkdir(exist_ok=True)
-
-# SQLite database URL
-DATABASE_URL = f"sqlite:///{DB_DIR}/devpulse.db"
+DATABASE_URL = os.getenv(
+    "DATABASE_URL",
+    "postgresql+psycopg://afaruk:158158158@localhost:5452/last_tracker_db"
+)
 
 engine = create_engine(
     DATABASE_URL,
-    connect_args={"check_same_thread": False},
     echo=True,
 )
 

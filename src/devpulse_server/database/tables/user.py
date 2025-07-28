@@ -25,3 +25,4 @@ class User(Base):
     def __repr__(self):
         """String representation of User."""
         return f"<User(username='{self.username}', email='{self.email}')>"
+    

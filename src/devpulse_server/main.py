@@ -21,7 +21,7 @@ async def lifespan(app: FastAPI):
     logger.info("Server connection established")
 
     yield  # Application runs here
-    drop_tables()
+    
     engine.dispose()
 
     logger.info("Database engine disposed")
