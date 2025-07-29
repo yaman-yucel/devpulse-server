@@ -7,7 +7,7 @@ from devpulse_server.database.tables.user import User
 from devpulse_server.database.tables.device import Device
 from devpulse_server.api.credentials.router import get_current_user_and_device
 from fastapi import HTTPException, status
-from sqlalchemy.orm import Session
+from sqlalchemy.ext.asyncio import AsyncSession
 from rich import print as rprint
 from devpulse_server.database.tables.device import Event, EventType
 router = APIRouter(prefix="/api/ingest", tags=["ingest"])
@@ -18,7 +18,7 @@ oauth2_scheme = OAuth2PasswordBearer(tokenUrl="token")
 async def ingest_events(
     events: EventRequest,
     user_device: Annotated[tuple[User, Device], Depends(get_current_user_and_device)],
-    db: Session = Depends(get_db),
+    db: AsyncSession = Depends(get_db),
 ):
     """
     Accepts a list of events in the request body and stores them.
@@ -69,7 +69,7 @@ async def ingest_events(
                 continue
             to_commit.append(db_event)
         db.add_all(to_commit)
-        db.commit()
+        await db.commit()
     except Exception as exc:
         # You can log the exception here
         raise HTTPException(
