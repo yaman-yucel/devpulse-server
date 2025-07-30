@@ -6,7 +6,7 @@ from pathlib import Path
 from loguru import logger
 
 
-def setup_logger(log_level: str = "INFO", log_to_file: bool = False, log_dir: str = "logs", rotation: str = "10 MB", retention: str = "7 days", compression: str = "gz") -> None:
+def setup_logger(log_level: str = "INFO", log_to_file: bool = True, log_dir: str = "logs", rotation: str = "100 MB", retention: str = "7 days", compression: str = "gz") -> None:
     # Remove default logger
     logger.remove()
 
