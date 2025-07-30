@@ -5,7 +5,6 @@ from sqlalchemy.orm import relationship
 
 from ..connection import Base
 
-
 class Device(Base):
     """Device table model."""
 
@@ -25,3 +24,4 @@ class Device(Base):
     def __repr__(self):
         """String representation of Device."""
         return f"<Device(device_id={self.device_id}, mac_address='{self.mac_address}', user_id='{self.user_id}')>"
+    

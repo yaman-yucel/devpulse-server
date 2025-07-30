@@ -17,7 +17,15 @@ dependencies = [
     "passlib[bcrypt]>=1.7.4",
     "pyjwt>=2.10.1",
     "pydantic-settings>=2.10.1",
+    "rich>=14.1.0",
+    "psycopg2-binary>=2.9.10",
+    "psycopg>=3.2.9",
+    "asyncpg>=0.30.0",
 ]
 
 [project.scripts]
 devpulse-server = "devpulse_server.main:main"
+
+[build-system]
+requires = ["setuptools", "wheel"]
+build-backend = "setuptools.build_meta"

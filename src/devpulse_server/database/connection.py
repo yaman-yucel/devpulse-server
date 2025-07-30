@@ -1,45 +1,25 @@
-"""Database connection configuration."""
-
-from pathlib import Path
-from typing import Generator
-
-from sqlalchemy import create_engine
 from sqlalchemy.ext.declarative import declarative_base
-from sqlalchemy.orm import Session, sessionmaker
+from sqlalchemy.ext.asyncio import create_async_engine, async_sessionmaker
+from ..config.database_config import db_settings
 
-DB_DIR = Path("data")
-DB_DIR.mkdir(exist_ok=True)
 
-# SQLite database URL
-DATABASE_URL = f"sqlite:///{DB_DIR}/devpulse.db"
-
-engine = create_engine(
-    DATABASE_URL,
-    connect_args={"check_same_thread": False},
+async_engine = create_async_engine(
+    db_settings.database_url,
     echo=True,
 )
 
-# Create session factory
-SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
+AsyncSessionLocal = async_sessionmaker(autocommit=False, autoflush=False, bind=async_engine)
 
-# Create declarative base
 Base = declarative_base()
 
+async def get_db():
+    async with AsyncSessionLocal() as session:
+        yield session
 
-def get_db() -> Generator[Session, None, None]:
-    """Get database session."""
-    db = SessionLocal()
-    try:
-        yield db
-    finally:
-        db.close()
+async def create_tables() -> None:
+    async with async_engine.begin() as conn:
+        await conn.run_sync(Base.metadata.create_all)
 
-
-def create_tables() -> None:
-    """Create all tables in the database."""
-    Base.metadata.create_all(bind=engine)
-
-
-def drop_tables() -> None:
-    """Drop all tables in the database."""
-    Base.metadata.drop_all(bind=engine)
+async def drop_tables() -> None:
+    async with async_engine.begin() as conn:
+        await conn.run_sync(Base.metadata.drop_all)
