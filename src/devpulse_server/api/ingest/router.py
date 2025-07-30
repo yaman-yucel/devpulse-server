@@ -8,8 +8,8 @@ from devpulse_server.database.tables.device import Device
 from devpulse_server.api.credentials.router import get_current_user_and_device
 from fastapi import HTTPException, status
 from sqlalchemy.ext.asyncio import AsyncSession
-from rich import print as rprint
-from devpulse_server.database.tables.device import Event, EventType
+from devpulse_server.database.tables.event import Event, EventType
+
 router = APIRouter(prefix="/api/ingest", tags=["ingest"])
 
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="token")
@@ -20,20 +20,12 @@ async def ingest_events(
     user_device: Annotated[tuple[User, Device], Depends(get_current_user_and_device)],
     db: AsyncSession = Depends(get_db),
 ):
-    """
-    Accepts a list of events in the request body and stores them.
-    Returns 200 on success (your client clears the store on 200).
-    """
     if not events:
-        # still return 200 so the client can clear its queue if it sent an empty list
         return {"message": "No events to ingest"}
 
     user, device = user_device
 
     try:
-        rprint(f"Received events for user: {user}, device: {device}")
-        rprint(events.events)
-        from devpulse_server.database.tables.device import Event, EventType
         to_commit = []
         for event in events.events:
             if event.__class__.__name__ == "ActivityEvent":
@@ -71,7 +63,6 @@ async def ingest_events(
         db.add_all(to_commit)
         await db.commit()
     except Exception as exc:
-        # You can log the exception here
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f"Error processing events: {exc}",

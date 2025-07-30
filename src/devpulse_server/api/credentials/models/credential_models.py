@@ -25,7 +25,6 @@ class SignupRequest(BaseModel):
     hostname: str | None = Field(None, min_length=1, description="Device hostname")
     platform: str | None = Field(None, min_length=1, description="Platform name")
     device_fingerprint: DeviceFingerprint = Field(..., description="Device hardware fingerprint")
-    # admin_secret: str = Field(..., min_length=1, description="Admin secret")
 
 
 class LoginRequest(BaseModel):

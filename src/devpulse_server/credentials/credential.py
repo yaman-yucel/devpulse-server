@@ -1,9 +1,7 @@
 from dataclasses import dataclass
 
-from fastapi import HTTPException
 from loguru import logger
 from passlib.context import CryptContext
-from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select
 
 from devpulse_server.api.credentials.models.credential_models import DeviceFingerprint

@@ -2,7 +2,7 @@ from datetime import datetime, timedelta, timezone
 from typing import Annotated
 
 import jwt
-from fastapi import APIRouter, Depends, HTTPException, Request, status
+from fastapi import APIRouter, Depends, HTTPException, status
 from fastapi.security import OAuth2PasswordBearer
 from jwt.exceptions import InvalidTokenError
 from pydantic_settings import BaseSettings
@@ -60,18 +60,14 @@ def create_access_token(data: dict, expires_delta: timedelta | None = None, neve
 
 @router.post("/signup")
 async def signup(request: SignupRequest, client: Annotated[CredentialClient, Depends(CredentialClient)]) -> dict[str, bool]:
-    """Sign up a new user with device validation."""
     status = await client.enroll_credential(request.username, request.password, request.user_email, request.device_fingerprint)
     return {"status": status}
 
 
 @router.post("/token")
 async def login(client: Annotated[CredentialClient, Depends(CredentialClient)], login_data: LoginRequest):
-    """Login endpoint that returns JWT token with device validation."""
 
-    # Create device fingerprint with only MAC address
     device_fingerprint = DeviceFingerprint(mac_address=login_data.mac_address)
-    # Authenticate user with device validation
     user = await client.authenticate_user(login_data.username, login_data.password, device_fingerprint)
     if not user:
         raise HTTPException(
@@ -80,7 +76,6 @@ async def login(client: Annotated[CredentialClient, Depends(CredentialClient)], 
             headers={"WWW-Authenticate": "Bearer"},
         )
 
-    # Create access token with optional expiration
     if login_data.never_expires:
         if not ALLOW_NEVER_EXPIRING_TOKENS:
             raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Non-expiring tokens are not allowed")
@@ -109,10 +104,4 @@ async def get_current_user_and_device(token: Annotated[str, Depends(oauth2_schem
         return user, device
     except InvalidTokenError:
         raise HTTPException(status_code=401, detail="Invalid token")
-
-
-@router.get("/user")
-async def get_user(user_device: Annotated[tuple[User, Device], Depends(get_current_user_and_device)]):
-    user, device = user_device
-    return {"user": user, "device": device}
 

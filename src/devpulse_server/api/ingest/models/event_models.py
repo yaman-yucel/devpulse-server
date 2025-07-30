@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 from datetime import datetime
-from typing import List, Union, Optional
 from pydantic import BaseModel, ConfigDict, Field
 
 
@@ -22,7 +21,7 @@ class WindowEvent(BaseModel):
     window_title: str
     duration: float
     start_time: datetime
-    end_time: Optional[datetime]
+    end_time: datetime | None
 
 
 EventUnion = ActivityEvent|HeartbeatEvent|WindowEvent
